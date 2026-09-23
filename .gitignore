@@ -29,9 +29,6 @@ hs_err_pid*
 build/
 target/
 
-# Cargo
-Cargo.lock
-
-# generated
-src/main/kotlin/uniffi/
-src/ykt.uniffi.rs
+# build products
+src/main/jniLibs/
+.kotlin/

@@ -2,22 +2,34 @@
 name = "ykt"
 version = "0.1.0"
 edition = "2021"
+publish = false
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+# The shared library a JVM or Android process loads. There is no Rust of
+# ykt's own behind it: `src/lib.rs` re-exports yniffi, the UniFFI bridge in
+# kidgloves-inc/yswift, and this crate exists so that Cargo has a root
+# package to pin that bridge from (`yniffi` below) and a lock to hold its
+# `yrs` on. UniFFI calls this shape a megazord.
+[lib]
+crate-type = ["cdylib"]
 
-[workspace]
+[[bin]]
+name = "uniffi-bindgen"
+path = "uniffi-bindgen.rs"
+required-features = ["uniffi/cli"]
 
 [dependencies]
-lib0 = "0.14.1" # must match yrs version
-thiserror = "1.0.38"
-uniffi = "0.22.0"
-uniffi_macros = "0.22.0"
-yrs = "0.14.1"
+# The one bridge, by commit on kidgloves-inc/yswift: the same UDL, the same
+# yrs and uniffi pins as the Swift XCFramework (Cargo.lock names them).
+yniffi = { git = "https://github.com/kidgloves-inc/yswift", rev = "a396e46d07b0d26a9f0de2e1bc711c9efb1cf85b" }
+uniffi = "0.27.1"
 
-[build-dependencies]
-uniffi_build = "0.22.0"
-
-[lib]
-name = "uniffi_ykt"
-path = "src/main/rust/lib.rs"
-crate-type = ["cdylib"]
+# Cargo takes profiles from the root package only, so the fork's release
+# profile is restated here rather than inherited: the .so an app ships is
+# built with panic = "abort", which is why the P7 no-panic property is owed
+# at every entry point, and stripped and size-optimised as the XCFramework is.
+[profile.release]
+strip = true
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
