@@ -1,0 +1,76 @@
+# ykt's own gate, on Linux, with nothing to hide: read-only caches and no
+# secrets. Three tiers, in the order they are cheapest to be wrong in:
+#
+#   1. the Rust property tier (P1-P8, proptest) of the yniffi commit
+#      Cargo.toml pins — run inside the checkout Cargo made of it, because a
+#      git dependency's tests cannot be run from the dependent crate;
+#   2. the Kotlin property tier (P1-P8 under kotest, the leak test, the
+#      entry-point sweep) through Gradle, against the host build of the
+#      cdylib;
+#   3. the three Android ABIs through cargo-ndk, so a change that builds on
+#      the host and not for arm64 is red here, not on a phone.
+#
+# The compiler is the channel rust-toolchain.toml pins, installed by name
+# and named on every cargo call so the file's Android targets are installed
+# once, here, rather than by rustup on every invocation.
+name: ykt
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the pinned compiler and the Android targets
+        id: toolchain
+        run: |
+          CHANNEL="$(python3 -c 'import tomllib; print(tomllib.load(open("rust-toolchain.toml", "rb"))["toolchain"]["channel"])')"
+          rustup toolchain install "$CHANNEL" --profile minimal --no-self-update \
+            --target aarch64-linux-android --target armv7-linux-androideabi --target x86_64-linux-android
+          echo "channel=${CHANNEL}" >> "$GITHUB_OUTPUT"
+          cargo "+${CHANNEL}" --version
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            ~/.cargo/bin/cargo-ndk
+            target
+          key: ykt-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ykt-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}-
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
+      - name: The Rust property tier, at the yniffi commit Cargo.toml pins
+        run: |
+          cargo "+${{ steps.toolchain.outputs.channel }}" fetch --locked
+          LIB="$(cargo "+${{ steps.toolchain.outputs.channel }}" metadata --format-version 1 --locked \
+            | grep -o '"manifest_path":"[^"]*/yswift-[^"]*/lib/Cargo.toml"' | head -1 | sed 's/.*:"//; s/"$//')"
+          cd "$(dirname "$LIB")"
+          cargo "+${{ steps.toolchain.outputs.channel }}" test --locked
+
+      - name: The Kotlin bindings and the Kotlin property tier
+        run: ./gradlew --no-daemon test
+
+      - name: The three Android ABIs
+        run: |
+          command -v cargo-ndk >/dev/null || cargo "+${{ steps.toolchain.outputs.channel }}" install cargo-ndk --locked
+          ANDROID_NDK_HOME="$ANDROID_NDK_LATEST_HOME" ./gradlew --no-daemon buildAndroid
+          ls src/main/jniLibs/*/libykt.so
