@@ -1,0 +1,11 @@
+# The same channel the fork's rust-toolchain.toml pins, so the .so is built by
+# the compiler the XCFramework is, and the three Android ABIs cargo-ndk
+# targets. rustup reads this file from the directory cargo runs in, which is
+# this one, not the fork's checkout.
+[toolchain]
+channel = "1.98.0"
+targets = [
+    "aarch64-linux-android",
+    "armv7-linux-androideabi",
+    "x86_64-linux-android",
+]
