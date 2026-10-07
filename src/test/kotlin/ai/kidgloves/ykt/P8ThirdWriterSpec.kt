@@ -18,6 +18,11 @@ import io.kotest.property.checkAll
 /**
  * P8: a third writer class behind a forwarding server's client-id gate.
  *
+ * It is a convergence property: peers are compared with each other, not with
+ * a model of the edits, so a core that dropped or reordered content the same
+ * way on every peer would pass it. P5 is the content property — it renders
+ * text against an independent string model.
+ *
  * The first two writer classes are peers of each other: each mints its own
  * client id and the wire takes its word for it. A writer whose client id the
  * server assigns is not one. The server draws its id, records it against the

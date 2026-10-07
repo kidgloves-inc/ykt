@@ -24,8 +24,18 @@ import java.util.TreeMap
  * is filed under it), so a named client whose
  * blocks are all zero length maps to an empty range list rather than vanishing
  * — which is what keeps [updateIsOnlyFrom] faithful. Stored ranges are never
- * empty, and are half open: `first` is the first clock, [endExclusive] the one
+ * empty, and are half open: `first` is the first clock, [end] the one
  * past the last, matching Rust's `Range<u32>`.
+ *
+ * The reader's domain is the byte shapes this tier produces — text inserts
+ * and deletes, deleted runs, root-key parents, GC and Skip blocks, delete
+ * sets, client ids up to 2^53-1 — and on those it agrees with yrs 0.27.4.
+ * Outside it there are known divergences, which become reachable once an
+ * Array or Map property is added: GC and Skip are detected by `info and 0x1F`
+ * where yrs matches the whole info byte; the content ref is masked with 0x1F
+ * where yrs uses 0b1111; JSON content (ref 2) is read as n strings where yrs
+ * reads n+1; XmlHook reads a key yrs does not; and Embed and Format strings
+ * are skipped where yrs parses them as JSON.
  */
 class UpdateSpan(
     val inserts: Map<ULong, List<UIntRange>>,
@@ -64,7 +74,7 @@ class UpdateSpan(
                     gapped = client
                     break
                 }
-                if (range.endExclusive > reachable) reachable = range.endExclusive
+                if (range.end > reachable) reachable = range.end
             }
             gapped
         }
@@ -167,12 +177,12 @@ class UpdateSpan(
 const val MAX_ANY_DEPTH: Int = 64
 
 /** The end one past the last clock of a (never empty) stored range. */
-private val UIntRange.endExclusive: UInt get() = last + 1u
+private val UIntRange.end: UInt get() = last + 1u
 
 private val MAX_CLOCK: ULong = UInt.MAX_VALUE.toULong()
 
 private fun coveredBy(ranges: Map<ULong, List<UIntRange>>, sv: Map<ULong, UInt>): Boolean =
-    ranges.all { (client, rs) -> rs.all { it.endExclusive <= (sv[client] ?: 0u) } }
+    ranges.all { (client, rs) -> rs.all { it.end <= (sv[client] ?: 0u) } }
 
 /**
  * Name [client] in [into] and, when the block is not zero length, record its

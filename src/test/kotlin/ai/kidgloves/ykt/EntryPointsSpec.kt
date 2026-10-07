@@ -121,9 +121,10 @@ class EntryPointsSpec : StringSpec({
  *    (`types/text.rs:845`). The binding knows the length — `length(tx)` is on
  *    the same object — and owes a `CodingException` instead.
  *  - **A string that is not JSON.** `Any::from_json(...).unwrap()` appears
- *    verbatim in `array.rs:121, :157`, `map.rs:79`, `text.rs:92, :107` and
- *    `attrs.rs:17`. Every one of those takes a `string` on the UDL, so every
- *    caller in every language can reach it with a typo. `YrsMap.get` is the
+ *    verbatim in `array.rs:121, :142, :157, :165`, `map.rs:79`,
+ *    `text.rs:92, :107` and `attrs.rs:17`. Every one of those takes a
+ *    `string` on the UDL, so every caller in every language can reach it with
+ *    a typo. `YrsMap.get` is the
  *    same shape with a different `unwrap`: `map.get(tx, key).unwrap()`
  *    (`map.rs:129`) dies on an absent key, while `containsKey` and `remove`
  *    answer for the same key.

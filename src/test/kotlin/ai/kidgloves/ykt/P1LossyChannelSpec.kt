@@ -17,6 +17,11 @@ import io.kotest.property.checkAll
 /**
  * P1: convergence under a lossy channel.
  *
+ * It is a convergence property: peers are compared with each other, not with
+ * a model of the edits, so a core that dropped or reordered content the same
+ * way on every peer would pass it. P5 is the content property — it renders
+ * text against an independent string model.
+ *
  * A generated program over two or three peers, interpreted by a channel that
  * reorders, duplicates and drops, which is what a forwarding server's channel
  * actually is: updates arrive out of order, twice, or

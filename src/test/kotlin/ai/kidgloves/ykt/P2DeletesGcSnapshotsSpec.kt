@@ -13,6 +13,11 @@ import io.kotest.property.checkAll
 /**
  * P2: deletes, garbage collection and snapshots.
  *
+ * It is a convergence property: peers are compared with each other, not with
+ * a model of the edits, so a core that dropped or reordered content the same
+ * way on every peer would pass it. P5 is the content property — it renders
+ * text against an independent string model.
+ *
  * This is the daily path of a compacting server: a document is served as a
  * snapshot of the whole document plus the updates that came after it, and a
  * peer joining that way has to end up where a peer that watched every update

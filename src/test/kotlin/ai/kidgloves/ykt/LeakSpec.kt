@@ -24,9 +24,8 @@ import uniffi.yniffi.YrsDoc
  * two of `/proc/self/statm` (resident pages) times the page size.
  *
  * That makes these two tests **Linux-only**, deliberately and not as an
- * oversight: `/proc/self/statm` is a Linux interface, ykt's CI is
- * `ubuntu-latest` (`.github/workflows/ci.yml`), and the shipping target is
- * Android, which is Linux. A run somewhere without `/proc` fails with that
+ * oversight: `/proc/self/statm` is a Linux interface, and the shipping target
+ * is Android, which is Linux. A run somewhere without `/proc` fails with that
  * sentence rather than skipping, because a leak test that skips is a leak test
  * that has stopped testing.
  *

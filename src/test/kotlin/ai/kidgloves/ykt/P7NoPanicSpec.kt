@@ -128,14 +128,18 @@ class P7NoPanicSpec : StringSpec({
      * no continuation, and yrs 0.27.4 hands the bytes to
      * `std::str::from_utf8_unchecked` without looking
      * (`p7_no_panic.rs:79-89`, `:218-226`). The result here is not even a
-     * panic: the child dies on SIGSEGV inside `libykt.so`, which the JVM's
-     * fatal error handler turns into the same abort. The pycrdt tier pins the
-     * same input as a strict expected failure.
+     * panic: the child dies on a memory fault inside the library — SIGBUS on
+     * macOS/aarch64, SIGSEGV expected on Linux — which the JVM's fatal error
+     * handler turns into the same exit 134. The test pins that shape, so it
+     * also fails if the failure turns into a Rust panic. The pycrdt tier pins
+     * the same input as a strict expected failure.
      */
     "the string content that kills apply_update still kills the process (pinned defect)" {
         val result = ChildJvm.run("apply", listOf(P7_INVALID_UTF8_CONTENT))
         withClue(result) {
             result.aborted shouldBe true
+            result.panicked shouldBe false
+            listOf("SIGSEGV", "SIGBUS").contains(result.fatalSignal) shouldBe true
         }
     }
 

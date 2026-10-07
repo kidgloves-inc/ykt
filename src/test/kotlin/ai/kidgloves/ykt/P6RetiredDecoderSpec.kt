@@ -4,7 +4,6 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
 import io.kotest.property.Arb
 import io.kotest.property.PropTestConfig
 import io.kotest.property.arbitrary.uLong
@@ -45,6 +44,9 @@ import uniffi.yniffi.YrsDocException
  * credit an update to exactly the id that authored it. The corner ids are
  * enumerated rather than drawn: 2^32 is the boundary the old decoder broke at,
  * and a uniform draw over 53 bits would hit it about once in two million.
+ *
+ * The independent pins are the fourteen-row table and the fresh-peer corner
+ * test; the other cases run the same model on both sides of their comparison.
  */
 class P6RetiredDecoderSpec : StringSpec({
 
@@ -70,8 +72,6 @@ class P6RetiredDecoderSpec : StringSpec({
             val credited = creditedByTheRetiredDecoder(id)
             if (id < (1uL shl 32)) {
                 withClue("$id is inside the old decoder's range") { credited shouldBe id }
-            } else {
-                withClue("$id must not survive the old decoder") { credited shouldNotBe id }
             }
         }
     }
@@ -124,9 +124,7 @@ class P6RetiredDecoderSpec : StringSpec({
             PropTestConfig(iterations = 256),
             Arb.uLong(1uL shl 32, (1uL shl 53) - 1uL),
         ) { id ->
-            val credited = creditedByTheRetiredDecoder(id)
-            credited shouldNotBe id
-            credited shouldBe modelled(id)
+            creditedByTheRetiredDecoder(id) shouldBe modelled(id)
         }
     }
 

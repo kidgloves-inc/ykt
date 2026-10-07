@@ -1,5 +1,6 @@
 package ai.kidgloves.ykt
 
+import io.kotest.assertions.fail
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
@@ -59,6 +60,7 @@ class P3PartialStateVectorsSpec : StringSpec({
      * report.
      */
     "a_diff_against_a_partial_state_vector_repairs_the_peer" {
+        var holes = 0
         checkAll(
             PropTestConfig(iterations = 128),
             clientId(),
@@ -91,6 +93,7 @@ class P3PartialStateVectorsSpec : StringSpec({
                     val first = span.firstInsertClock(client)
                     val hole = if (first != null) (stateBefore[client] ?: 0u) < first else false
                     if (hole) {
+                        holes++
                         withClue(
                             "an update past a hole in its author's own sequence must not be integrated",
                         ) {
@@ -103,6 +106,9 @@ class P3PartialStateVectorsSpec : StringSpec({
                     // block in the store, not as a pending update, so the flag
                     // stays false while the peer is demonstrably behind. See the
                     // module note in `p1_lossy_channel`.
+                    // Narrow, so not floored (0-10 times of 128 over five runs):
+                    // update j sits past the prefix, so it is covered only when
+                    // it inserts nothing and deletes only what the prefix holds.
                     if (covered) {
                         peer.observe().missing shouldBe false
                     }
@@ -123,6 +129,9 @@ class P3PartialStateVectorsSpec : StringSpec({
                 }
             }
         }
+        // A property whose hole arm stopped running would pass while asserting
+        // nothing. Five runs took it 82-99 times of 128.
+        if (holes < 40) fail("the hole arm ran $holes times, below its floor of 40")
     }
 
     /**
