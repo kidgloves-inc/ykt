@@ -69,7 +69,7 @@ class EntryPointsSpec : StringSpec({
                 val result = ChildJvm.run("entry", listOf(name))
                 if (result.aborted) {
                     throw AssertionError(
-                        "aborted: the core panicked across the FFI on $name\n${result.stderr}",
+                        "aborted: ${result.howItDied} on $name\n${result.stderr}",
                     )
                 }
                 if (result.exitCode != 0) {

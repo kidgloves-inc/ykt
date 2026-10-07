@@ -764,6 +764,13 @@ data class ChildResult(
     val fatalSignal: String?
         get() = Regex("""^#\s+(SIG[A-Z]+) \(""", RegexOption.MULTILINE).find(stdout)?.groupValues?.get(1)
 
+    /** How an aborted child died, in the words every abort message uses. */
+    val howItDied: String get() = when {
+        panicked -> "the core panicked across the FFI"
+        fatalSignal != null -> "the child died with exit 134 on $fatalSignal (the JVM wrote an hs_err report)"
+        else -> "the child died with exit 134, with no Rust panic and no JVM fatal-error report"
+    }
+
     companion object {
         /** 128 + SIGABRT(6): the exit code the JVM's own `abort()` produces. */
         const val SIGABRT_EXIT = 134
@@ -851,13 +858,8 @@ object ChildJvm {
 fun ChildResult.requireEveryInputAnswered(probe: String, inputs: List<String>) {
     if (aborted) {
         val killer = inputs.getOrNull(verdicts.size) ?: "<the child died before its first input>"
-        val how = when {
-            panicked -> "the core panicked across the FFI"
-            fatalSignal != null -> "the child died with exit 134 on $fatalSignal (the JVM wrote an hs_err report)"
-            else -> "the child died with exit 134, with no Rust panic and no JVM fatal-error report"
-        }
         throw AssertionError(
-            "aborted: $how on $probe with $killer\n" +
+            "aborted: $howItDied on $probe with $killer\n" +
                 "(${verdicts.size} of ${inputs.size} inputs had been answered)\n" +
                 "$stderr\n$stdout",
         )
