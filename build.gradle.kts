@@ -16,7 +16,6 @@ dependencies {
     implementation("net.java.dev.jna:jna:5.17.0")
     testImplementation("io.kotest:kotest-runner-junit5:5.9.1")
     testImplementation("io.kotest:kotest-assertions-core:5.9.1")
-    testImplementation("io.kotest:kotest-property:5.9.1")
 }
 
 kotlin {
@@ -64,9 +63,9 @@ tasks.withType<Test>().configureEach {
     }
 }
 
-// `test` is the whole tier: P1-P8, the entry-point sweep, the leak test.
-// A consumer can compile its own tests against the binding into the same
-// run without forking the build: -PextraTestSources=<dir>.
+// `test` runs the unit tests against the host build. A consumer can compile
+// its own tests against the binding into the same run without forking the
+// build: -PextraTestSources=<dir>.
 providers.gradleProperty("extraTestSources").orNull?.let { sourceSets["test"].kotlin.srcDir(it) }
 
 application {

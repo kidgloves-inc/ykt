@@ -7,9 +7,9 @@ ykt has no bridge of its own. It builds `yniffi`, the UniFFI crate under
 `lib/` of [kidgloves-inc/yswift](https://github.com/kidgloves-inc/yswift),
 as a shared library, and generates the Kotlin with
 `uniffi-bindgen --language kotlin` from that crate's `yniffi.udl` at
-commit `a396e46` (tag `yrs-0.27-tests-1`), one commit ahead of yswift's
-`main`. The Swift binding uses the same UDL once that commit lands on
-yswift's `main`. So the Kotlin and Swift bindings wrap the same `yrs`
+commit `3cdfa36`, the head of yswift's `yrs-0.27-tests` branch, which is
+not yet on yswift's `main`. The Swift binding uses the same UDL once that
+commit lands there. So the Kotlin and Swift bindings wrap the same `yrs`
 (0.27.4, `sync` feature) and the same `uniffi` (0.27.x), and a V1 update
 or state vector either one writes decodes the same way in the other.
 
@@ -25,7 +25,7 @@ or state vector either one writes decodes the same way in the other.
   UDL of the yswift checkout Cargo resolved, into `build/generated/uniffi`.
   No copy of the UDL lives here.
 - `build.gradle.kts` builds a Kotlin/JVM library.
-  - `test` runs the test tier against a host build of the library.
+  - `test` runs the unit tests against a host build of the library.
   - `buildAndroid` runs `cargo ndk` for arm64-v8a, armeabi-v7a and x86_64
     into `src/main/jniLibs/`. It needs cargo-ndk and `ANDROID_NDK_HOME`.
   - `-PextraTestSources=<dir>` compiles your own tests against the binding
@@ -39,49 +39,22 @@ running `cargo update -p yniffi`, and committing both files.
 ## Tests
 
 The tests use kotest and live under `src/test/kotlin/ai/kidgloves/ykt/`.
-The property tier mirrors yswift's Rust tier (`lib/src/proptests/p1..p8`)
-under the same P-numbers and in the same words. It uses the same
-generators, the same corner client ids
-(`{1, 2^31-1, 2^31, 2^32-1, 2^32, 2^53-1}`) and the same case counts. It
-drives the generated `YrsDoc`, `YrsTransaction` and `YrsText`, never `yrs`
-directly, so a failure is a statement about this library.
+`BindingSpec.kt` drives the generated `YrsDoc`, `YrsTransaction` and
+`YrsText` against a host build of the library, never `yrs` directly, so a
+failure is a statement about this library. It checks that the library
+loads; that an update one document writes reads back in another; that
+`with_client_id` accepts 2^53 - 1 and refuses 2^53 with
+`YrsDocException.ClientIdOutOfRange`; that `transaction_has_missing_updates`
+goes from false to true while a dependency is withheld and back to false
+when it arrives; and that offsets and lengths are UTF-16 code units.
 
-| | what | file |
-|---|---|---|
-| P1 | convergence under a lossy channel | `P1LossyChannelSpec.kt` |
-| P2 | deletes, GC and snapshots | `P2DeletesGcSnapshotsSpec.kt` |
-| P3 | partial state vectors | `P3PartialStateVectorsSpec.kt` |
-| P4 | byte determinism, and vectors pinned against pycrdt | `P4ByteDeterminismSpec.kt` |
-| P5 | offsets on real text, in UTF-16 units | `P5OffsetsSpec.kt` |
-| P6 | the retired 0.18 decoder as a negative | `P6RetiredDecoderSpec.kt` |
-| P7 | no panic across the FFI, run in a child JVM | `P7NoPanicSpec.kt` |
-| P8 | a writer whose client id a server assigns | `P8ThirdWriterSpec.kt` |
-| — | every UDL entry point, probed in a child JVM | `EntryPointsSpec.kt` |
-| — | no close()-managed object leaks (Linux) | `LeakSpec.kt` |
-
-Two things differ from the Rust tier.
-
-- **P6 runs a model of the retired decoder.** Kotlin cannot link
-  `yrs 0.18.2`, so P6 runs the retired decoder's u32 accumulation as a
-  model. The model is pinned on every case against the fourteen-row table
-  the Rust tier recorded from the real 0.18.2 (`RetiredDecoder.kt`).
-- **Clock ranges come from a separate reader.** Kotlin cannot call
-  `yrs::Update::decode_v1`, so the independent view of an update's clock
-  ranges is a V1 struct-section reader written in Kotlin (`UpdateSpan.kt`).
-  It is depth-bounded at 64.
-
-P7 and the entry-point sweep run each probe in a child JVM (`Probe.kt`).
-The release profile is `panic = "abort"`, so a panic in the core kills the
-process, and "the process survived" is the property. An exit by signal is
-a failure that names the entry point and the input. The sweep covers every
-method of every UDL interface with in-domain and out-of-domain inputs. The
-entry points that abort today are pinned in `ABORTS_TODAY`, strictly in
-both directions, so the list is the work order for yswift's binding:
-validate the input and throw instead of panicking.
+The release profile is `panic = "abort"` and `test` loads that same
+release build, so a panic in the core ends the test JVM rather than failing
+one test.
 
 ```
 gradle run              # src/main/kotlin/Main.kt: create a doc, append, print
-gradle test             # P1-P8, the sweep, the leak test
+gradle test             # the unit tests
 gradle buildAndroid     # the three ABIs; needs cargo-ndk and an NDK
 ```
 
