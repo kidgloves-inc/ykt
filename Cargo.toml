@@ -20,7 +20,7 @@ required-features = ["uniffi/cli"]
 [dependencies]
 # The one bridge, by commit on kidgloves-inc/yswift: the same UDL, the same
 # yrs and uniffi pins as the Swift XCFramework (Cargo.lock names them).
-yniffi = { git = "https://github.com/kidgloves-inc/yswift", rev = "3cdfa36173568b2f68645876bcaf2d50ea2eed70" }
+yniffi = { git = "https://github.com/kidgloves-inc/yswift", rev = "73e34409b24a673d2741192f3edeade8601edd57" }
 uniffi = "0.27.1"
 
 # Cargo takes profiles from the root package only, so the fork's release

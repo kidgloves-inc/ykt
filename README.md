@@ -7,9 +7,8 @@ ykt has no bridge of its own. It builds `yniffi`, the UniFFI crate under
 `lib/` of [kidgloves-inc/yswift](https://github.com/kidgloves-inc/yswift),
 as a shared library, and generates the Kotlin with
 `uniffi-bindgen --language kotlin` from that crate's `yniffi.udl` at
-commit `3cdfa36`, the head of yswift's `yrs-0.27-tests` branch, which is
-not yet on yswift's `main`. The Swift binding uses the same UDL once that
-commit lands there. So the Kotlin and Swift bindings wrap the same `yrs`
+commit `73e3440` on yswift's `main`, the same UDL the Swift binding is
+generated from. So the Kotlin and Swift bindings wrap the same `yrs`
 (0.27.4, `sync` feature) and the same `uniffi` (0.27.x), and a V1 update
 or state vector either one writes decodes the same way in the other.
 
