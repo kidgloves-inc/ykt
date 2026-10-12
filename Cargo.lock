@@ -827,7 +827,7 @@ dependencies = [
 [[package]]
 name = "yniffi"
 version = "0.1.0"
-source = "git+https://github.com/kidgloves-inc/yswift?rev=a396e46d07b0d26a9f0de2e1bc711c9efb1cf85b#a396e46d07b0d26a9f0de2e1bc711c9efb1cf85b"
+source = "git+https://github.com/kidgloves-inc/yswift?rev=3cdfa36173568b2f68645876bcaf2d50ea2eed70#3cdfa36173568b2f68645876bcaf2d50ea2eed70"
 dependencies = [
  "thiserror 1.0.69",
  "uniffi",

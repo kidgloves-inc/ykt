@@ -20,13 +20,14 @@ required-features = ["uniffi/cli"]
 [dependencies]
 # The one bridge, by commit on kidgloves-inc/yswift: the same UDL, the same
 # yrs and uniffi pins as the Swift XCFramework (Cargo.lock names them).
-yniffi = { git = "https://github.com/kidgloves-inc/yswift", rev = "a396e46d07b0d26a9f0de2e1bc711c9efb1cf85b" }
+yniffi = { git = "https://github.com/kidgloves-inc/yswift", rev = "3cdfa36173568b2f68645876bcaf2d50ea2eed70" }
 uniffi = "0.27.1"
 
 # Cargo takes profiles from the root package only, so the fork's release
 # profile is restated here rather than inherited: the .so an app ships is
-# built with panic = "abort", which is why the P7 no-panic property is owed
-# at every entry point, and stripped and size-optimised as the XCFramework is.
+# built with panic = "abort", so a panic in the core ends the process rather
+# than reaching Kotlin as an exception, and stripped and size-optimised as the
+# XCFramework is.
 [profile.release]
 strip = true
 opt-level = "z"
