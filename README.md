@@ -27,21 +27,37 @@ or state vector either one writes decodes the same way in the other.
   - `test` runs the unit tests against a host build of the library.
   - `buildAndroid` builds the library for arm64-v8a and x86_64 into
     `build/jniLibs/<abi>/libykt.so`, linked by the NDK's clang for
-    `androidMinSdk`. The NDK is `ndkVersion` (both in `gradle.properties`)
-    under the Android SDK's `ndk/`: `$ANDROID_HOME`, `$ANDROID_SDK_ROOT`, or
-    the `sdk.dir` of the nearest `local.properties` at or above this
-    directory; install it with `sdkmanager "ndk;<version>"`
-    and the two Rust targets `rust-toolchain.toml` lists. r28 is the first
+    `androidMinSdk` (31): the library may use any symbol of that API level,
+    so it must be no higher than your app's `minSdk`; `-PandroidMinSdk=`
+    lowers it. Only the 64-bit ABIs are built, by choice. The NDK is
+    `ndkVersion` (both in `gradle.properties`) under the Android SDK's
+    `ndk/`. The SDK is found as the Android Gradle plugin finds it: the
+    `sdk.dir` of the nearest `local.properties` at or above this directory
+    that has one, else `$ANDROID_HOME`, else `$ANDROID_SDK_ROOT`. An app
+    that includes ykt from inside its own tree therefore shares its SDK; one
+    that includes it from beside its tree sets `ANDROID_HOME`. Install it
+    with `sdkmanager "ndk;<version>"`, and the two Rust targets
+    `rust-toolchain.toml` lists. r28 is the first
     NDK that aligns a shared library's segments to 16 KB by default.
-  - `check` also runs `verifyAndroid`, which fails unless each ABI's library
-    is a 64-bit ELF for that ABI's machine with every loadable segment
-    aligned to at least 16 KB, as Android 15's 16 KB pages and Google Play
-    require. A host library copied in by mistake fails the machine, an
-    older NDK's link the alignment.
+  - `check` (and so `build`) also runs `buildAndroid` and `verifyAndroid`,
+    so it needs the NDK too; `gradle test` does not. `verifyAndroid` fails
+    unless each ABI's library is a 64-bit ELF for that ABI's machine with
+    every loadable segment aligned to at least 16 KB, as Android 15's 16 KB
+    pages and Google Play require. A library for another ABI fails the
+    machine, an older NDK's link the alignment. It does not read whether a
+    library is Android's rather than a desktop Linux one.
   - `-PextraTestSources=<dir>` compiles your own tests against the binding
     in the same run.
   An Android app module takes the jar, `build/jniLibs/` and JNA's Android
-  AAR (`net.java.dev.jna:jna:<version>@aar`) in place of the desktop jar.
+  AAR at the version the jar is built against
+  (`net.java.dev.jna:jna:5.17.0@aar`) in place of the desktop jar.
+
+Coming from the cargo-ndk build: `ANDROID_NDK_HOME` is no longer read (the
+NDK is found under the SDK, as above); the default API floor moves from 21
+to 31; the libraries land in `build/jniLibs/`, so a leftover
+`src/main/jniLibs/` can be deleted; and an app that packages them
+uncompressed needs Android Gradle plugin 8.5.1 or newer to align them at
+16 KB inside the APK.
 
 A change the binding needs, such as a new UDL method or a crate type, is
 made in yswift's `lib/`. Moving the pin means editing `rev` in `Cargo.toml`,
@@ -67,7 +83,7 @@ one test.
 gradle run              # src/main/kotlin/Main.kt: create a doc, append, print
 gradle test             # the unit tests
 gradle buildAndroid     # the two ABIs; needs the NDK
-gradle check            # the unit tests and the per-ABI ELF check
+gradle check            # the unit tests and the per-ABI ELF check; needs NDK
 ```
 
 `./gradlew` needs a wrapper jar, which this repository does not carry; run
