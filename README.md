@@ -28,7 +28,9 @@ or state vector either one writes decodes the same way in the other.
   - `buildAndroid` builds the library for arm64-v8a and x86_64 into
     `build/jniLibs/<abi>/libykt.so`, linked by the NDK's clang for
     `androidMinSdk`. The NDK is `ndkVersion` (both in `gradle.properties`)
-    under `$ANDROID_HOME/ndk/`; install it with `sdkmanager "ndk;<version>"`
+    under the Android SDK's `ndk/`: `$ANDROID_HOME`, `$ANDROID_SDK_ROOT`, or
+    the `sdk.dir` of the nearest `local.properties` at or above this
+    directory; install it with `sdkmanager "ndk;<version>"`
     and the two Rust targets `rust-toolchain.toml` lists. r28 is the first
     NDK that aligns a shared library's segments to 16 KB by default.
   - `check` also runs `verifyAndroid`, which fails unless each ABI's library
