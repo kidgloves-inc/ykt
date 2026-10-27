@@ -1,6 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.util.Properties
 
 plugins {
     kotlin("jvm") version "2.1.20"
@@ -67,7 +68,7 @@ abstract class CargoAndroidBuild : DefaultTask() {
 
     @TaskAction
     fun build() {
-        check(ndk.get().asFile.isDirectory) { "no NDK at ${ndk.get().asFile}; set ANDROID_HOME and install it with sdkmanager \"ndk;<ndkVersion>\"" }
+        check(ndk.get().asFile.isDirectory) { "no NDK at ${ndk.get().asFile}; set sdk.dir in local.properties or ANDROID_HOME, and install it with sdkmanager \"ndk;<ndkVersion>\"" }
         // The NDK ships one x86_64 toolchain for macOS, Apple silicon included.
         val host = if (System.getProperty("os.name").startsWith("Mac")) "darwin-x86_64" else "linux-x86_64"
         val bin = ndk.get().dir("toolchains/llvm/prebuilt/$host/bin")
@@ -89,9 +90,10 @@ abstract class CargoAndroidBuild : DefaultTask() {
     }
 }
 
-// The proof the build made a phone's library: for each ABI, a 64-bit ELF for
-// that ABI's machine, every loadable segment aligned to at least 16 KB. A host
-// library copied in by mistake fails the machine, an r27 link the alignment.
+// For each ABI, a 64-bit ELF for that ABI's machine with every loadable
+// segment aligned to at least 16 KB, which Google Play requires. A library for
+// another ABI fails the machine, an r27 link the alignment. Nothing here reads
+// whether the library is Android's rather than a desktop Linux one.
 abstract class VerifyNativeLibs : DefaultTask() {
     @get:InputDirectory abstract val jniLibs: DirectoryProperty
     @get:Input abstract val machines: MapProperty<String, Int>
@@ -118,13 +120,27 @@ abstract class VerifyNativeLibs : DefaultTask() {
     }
 }
 
+// The Android SDK, found as the Android Gradle plugin finds it: the sdk.dir of
+// the nearest local.properties at or above this directory that has one (where
+// Android Studio writes it, so an app that includes ykt from inside its own
+// tree shares its SDK), else ANDROID_HOME, else ANDROID_SDK_ROOT.
+val localSdk: String? = generateSequence(rootDir) { it.parentFile }
+    .map { it.resolve("local.properties") }.filter { it.isFile }
+    .mapNotNull { f ->
+        Properties().apply { f.reader().use { load(it) } }.getProperty("sdk.dir")
+            ?.let { f.parentFile.resolve(it).path }
+    }
+    .firstOrNull()
+
 // The per-ABI libraries for an Android app's jniLibs/, under build/jniLibs.
 val buildAndroid by tasks.registering(CargoAndroidBuild::class) {
     minSdk = providers.gradleProperty("androidMinSdk").map(String::toInt)
     targets = abis.mapValues { it.value.first }
-    ndk = layout.dir(providers.environmentVariable("ANDROID_HOME")
-        .orElse(providers.environmentVariable("ANDROID_SDK_ROOT")).orElse("\$ANDROID_HOME")
-        .zip(providers.gradleProperty("ndkVersion")) { sdk, version -> File("$sdk/ndk/$version") })
+    val sdk = localSdk?.let { providers.provider { it } }
+        ?: providers.environmentVariable("ANDROID_HOME")
+            .orElse(providers.environmentVariable("ANDROID_SDK_ROOT")).orElse("")
+    ndk = layout.dir(sdk
+        .zip(providers.gradleProperty("ndkVersion")) { dir, version -> File("$dir/ndk/$version") })
     crate = layout.projectDirectory
     jniLibs = layout.buildDirectory.dir("jniLibs")
 }
