@@ -25,11 +25,21 @@ or state vector either one writes decodes the same way in the other.
   No copy of the UDL lives here.
 - `build.gradle.kts` builds a Kotlin/JVM library.
   - `test` runs the unit tests against a host build of the library.
-  - `buildAndroid` runs `cargo ndk` for arm64-v8a, armeabi-v7a and x86_64
-    into `src/main/jniLibs/`. It needs cargo-ndk and `ANDROID_NDK_HOME`.
+  - `buildAndroid` builds the library for arm64-v8a and x86_64 into
+    `build/jniLibs/<abi>/libykt.so`, linked by the NDK's clang for
+    `androidMinSdk`. The NDK is `ndkVersion` (both in `gradle.properties`)
+    under `$ANDROID_HOME/ndk/`; install it with `sdkmanager "ndk;<version>"`
+    and the two Rust targets `rust-toolchain.toml` lists. r28 is the first
+    NDK that aligns a shared library's segments to 16 KB by default.
+  - `check` also runs `verifyAndroid`, which fails unless each ABI's library
+    is a 64-bit ELF for that ABI's machine with every loadable segment
+    aligned to at least 16 KB, as Android 15's 16 KB pages and Google Play
+    require. A host library copied in by mistake fails the machine, an
+    older NDK's link the alignment.
   - `-PextraTestSources=<dir>` compiles your own tests against the binding
     in the same run.
-  An Android app module takes the jar and `jniLibs/`.
+  An Android app module takes the jar, `build/jniLibs/` and JNA's Android
+  AAR (`net.java.dev.jna:jna:<version>@aar`) in place of the desktop jar.
 
 A change the binding needs, such as a new UDL method or a crate type, is
 made in yswift's `lib/`. Moving the pin means editing `rev` in `Cargo.toml`,
@@ -54,7 +64,8 @@ one test.
 ```
 gradle run              # src/main/kotlin/Main.kt: create a doc, append, print
 gradle test             # the unit tests
-gradle buildAndroid     # the three ABIs; needs cargo-ndk and an NDK
+gradle buildAndroid     # the two ABIs; needs the NDK
+gradle check            # the unit tests and the per-ABI ELF check
 ```
 
 `./gradlew` needs a wrapper jar, which this repository does not carry; run
